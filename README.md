@@ -1,5 +1,16 @@
 # interview-zigaresnik
 
+## Solution
+
+I used python with asyncio and [Async HTTP library](https://docs.aiohttp.org/en/stable/index.html) for both client and server. 
+For the environment and module setup i used [Pipenv](https://docs.pipenv.org/en/latest/).
+
+* [Install pipenv](https://docs.pipenv.org/en/latest/install/#installing-pipenv)
+* Run `pipenv install`
+* Start the server
+* Start the client with an argument for a number of clients
+
+
 In this task, you need to write a simple HTTP Denial-of-Service protection system.
 The solution should reside in different modules (one for the server, one for the client).
 
