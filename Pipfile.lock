@@ -1,7 +1,7 @@
 {
     "_meta": {
         "hash": {
-            "sha256": "f4cb6b95ef4dc731dfabe9724345a018836c729005ba55aea3a0116c6ff10e4c"
+            "sha256": "3b37861af029bf4082d0b7a054269d037d68bbaccc473240a1a376ac5221dc9f"
         },
         "pipfile-spec": 6,
         "requires": {
@@ -15,6 +15,12 @@
         ]
     },
     "default": {
+        "aioconsole": {
+            "hashes": [
+                "sha256:498e567805b74c1ecf4501d28e48727e8e77af8d6a0b8f1b7aa9a4842e02743d"
+            ],
+            "version": "==0.1.15"
+        },
         "aiodns": {
             "hashes": [
                 "sha256:815fdef4607474295d68da46978a54481dd1e7be153c7d60f9e72773cd38d77d",
@@ -164,7 +170,6 @@
         },
         "pycparser": {
             "hashes": [
-                "sha256:775b21100b69fc5558ae8597d1bab12796745d15264e1b20ff5defc159851942",
                 "sha256:a988718abfad80b6b157acce7bf130a30876d27603738ac39f140993246b25b3"
             ],
             "version": "==2.19"
@@ -193,6 +198,12 @@
                 "sha256:b65db1bbaac9f9f4d190199bb8680af6f6f84fd3769a5ea883df8a91fe68b4c4"
             ],
             "version": "==2.2.5"
+        },
+        "autopep8": {
+            "hashes": [
+                "sha256:4d8eec30cc81bc5617dbf1218201d770dc35629363547f17577c61683ccfb3ee"
+            ],
+            "version": "==1.4.4"
         },
         "isort": {
             "hashes": [
@@ -230,6 +241,13 @@
                 "sha256:dd8d182285a0fe56bace7f45b5e7d1a6ebcbf524e8f3bd87eb0f125271b8831f"
             ],
             "version": "==0.6.1"
+        },
+        "pycodestyle": {
+            "hashes": [
+                "sha256:95a2219d12372f05704562a14ec30bc76b05a5b297b21a5dfe3f6fac3491ae56",
+                "sha256:e40a936c9a450ad81df37f549d676d127b1b66000a6c500caa2b085bc0ca976c"
+            ],
+            "version": "==2.5.0"
         },
         "pylint": {
             "hashes": [
