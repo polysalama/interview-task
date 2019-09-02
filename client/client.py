@@ -81,13 +81,14 @@ def char_keyboard_nonblock(queue):
                 queue.put_nowait(getch())
                 return
     else:
+        # Stdin file descriptor
         fd = sys.stdin.fileno()
 
+        # Save terminal setting and modify to react on key press
         oldterm = termios.tcgetattr(fd)
         newattr = termios.tcgetattr(fd)
         newattr[3] = newattr[3] & ~termios.ICANON & ~termios.ECHO
         termios.tcsetattr(fd, termios.TCSANOW, newattr)
-
         oldflags = fcntl.fcntl(fd, fcntl.F_GETFL)
         fcntl.fcntl(fd, fcntl.F_SETFL, oldflags | os.O_NONBLOCK)
 
@@ -96,6 +97,9 @@ def char_keyboard_nonblock(queue):
                 char = sys.stdin.read(1)
                 if char:
                     queue.put_nowait(char)
+                    # Restor settings
+                    termios.tcsetattr(fd, termios.TCSAFLUSH, oldterm)
+                    fcntl.fcntl(fd, fcntl.F_SETFL, oldflags)
                     return
         except IOError:
             pass
