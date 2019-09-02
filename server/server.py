@@ -3,15 +3,16 @@ from aiohttp import web
 import asyncio
 from datetime import datetime
 
+
 async def reset_client_count(q, id):
     # Clears request counter for a client every 5s
-    # After if clears the counter it waits for an event to start 
+    # After if clears the counter it waits for an event to start
     # a new time frame
     while True:
         await asyncio.sleep(5)
         clients[id][0] = 0
         print(
-            f'{datetime.now().strftime("%H:%M:%S.%f")[:-4]} ' \
+            f'{datetime.now().strftime("%H:%M:%S.%f")[:-4]} '
             f'Client {id}: Reset time frame {id}')
         await clients[id][1].wait()
         clients[id][1].clear()
@@ -21,7 +22,7 @@ async def handle(request):
     # Crates a counter and an event for every new client, and start a task
     # for every clients time frame.
     # When counter reaches >= 5 it start returning 503, else it returns 200
-    # Every time a client sends a request after the last time frame has passed 
+    # Every time a client sends a request after the last time frame has passed
     # it triggers an event to start a new time frame
     id = request.rel_url.query['clientId']
     text = f'{datetime.now().strftime("%H:%M:%S.%f")[:-4]} ' \
@@ -48,5 +49,3 @@ loop = asyncio.get_event_loop()
 app = web.Application()
 app.add_routes([web.get('/', handle)])
 web.run_app(app, port=8080, host='localhost')
-
-

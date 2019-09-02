@@ -1,13 +1,13 @@
 #!/usr/bin/env python3
 import aiohttp
 import asyncio
-import aioconsole
 import argparse
 import random
+import threading
 # Diffrent imports for windows or linux/MacOS,
 # for reading key press to end the program
 try:
-    from msvcrt import getch
+    from msvcrt import getch, kbhit
     win = True
 except ImportError:
     import os
@@ -68,12 +68,18 @@ async def run_clients():
         await make_requests(session, args.num_of_clients[0])
 
 
-async def char_keyboard_nonblock():
+def char_keyboard_nonblock(queue):
     # Convoluted way to read a key press without presing enter
+    # It runs in its own thread because i didn't find a way to use
+    # kbhit/getch in a non blocking way
+    # When a key is pressed ti puts it in a queue which is read in
+    # a cancel coroutine
     if win:
-        getch()
+        while True:
+            if kbhit():
+                queue.put_nowait(getch())
+                return
     else:
-        stdin, stdout = await aioconsole.get_standard_streams()
         fd = sys.stdin.fileno()
 
         oldterm = termios.tcgetattr(fd)
@@ -85,7 +91,11 @@ async def char_keyboard_nonblock():
         fcntl.fcntl(fd, fcntl.F_SETFL, oldflags | os.O_NONBLOCK)
 
         try:
-            await stdin.read(1)
+            while True:
+                char = sys.stdin.read(1)
+                if char:
+                    queue.put_nowait(char)
+                    return
         except IOError:
             pass
 
@@ -93,10 +103,10 @@ async def char_keyboard_nonblock():
         fcntl.fcntl(fd, fcntl.F_SETFL, oldflags)
 
 
-async def cancel(requests_task):
-    # Waits for key press or if event is triggered at the start of the 
+async def cancel(requests_task, queue):
+    # Waits for key press or if event is triggered at the start of the
     # program by a connection problem
-    done, pending = await asyncio.wait([char_keyboard_nonblock(),
+    done, pending = await asyncio.wait([queue.get(),
                                         cancel_event.wait()],
                                        return_when=asyncio.FIRST_COMPLETED)
     next(iter(pending)).cancel()
@@ -113,9 +123,17 @@ args = parser.parse_args()
 
 
 cancel_event = asyncio.Event()
+
+inputQueue = asyncio.Queue()
+inputThread = threading.Thread(
+    target=char_keyboard_nonblock, args=(inputQueue,),
+    daemon=True)
+inputThread.start()
+
 loop = asyncio.get_event_loop()
+
 requests_task = loop.create_task(run_clients())
-loop.run_until_complete(cancel(requests_task))
+loop.run_until_complete(cancel(requests_task, inputQueue))
 
 # Zero-sleep to allow underlying connections to close
 loop.run_until_complete(asyncio.sleep(0))
