@@ -4,7 +4,6 @@ import asyncio
 import argparse
 import random
 import threading
-import signal
 # Diffrent imports for windows or linux/MacOS,
 # for reading key press to end the program
 try:
@@ -48,7 +47,7 @@ async def make_request(session, id):
     # Returns if cancel_event is set on key press or by a exception
     while not cancel_event.is_set():
         try:
-            async with session.get(f'{URL}/?clientId={id}', timeout=2) as response:
+            async with session.get(f'{URL}/?clientId={id}', timeout=5) as response:
                 color = OK if response.status == 200 else FAIL
                 text = await response.text()
                 print(f'Client {id}: {color}{response.status} {text}{ENDC}')
@@ -122,11 +121,8 @@ async def cancel(requests_task, queue):
     cancel_event.set()
     await requests_task
 
-
-async def signal_handler():
-    # Callback for the signal handlers 
-    cancel_event.set()
-
+async def await_requests_task_wrapper(requests_task):
+    await requests_task
 
 # Args parser
 parser = argparse.ArgumentParser(description='Run N clients')
@@ -134,7 +130,8 @@ parser.add_argument('num_of_clients', metavar='N', type=int_check, nargs=1,
                     help='number of clients to run')
 args = parser.parse_args()
 
-fd, oldterm, oldflags = setup_terminal()
+if not win:
+    fd, oldterm, oldflags = setup_terminal()
 
 # Start input thread
 inputQueue = asyncio.Queue()
@@ -146,18 +143,16 @@ inputThread.start()
 cancel_event = asyncio.Event()
 loop = asyncio.get_event_loop()
 
-# Handle signals
-signals = (signal.SIGHUP, signal.SIGTERM, signal.SIGINT)
-for s in signals:
-    loop.add_signal_handler(
-        s, lambda s=s: asyncio.create_task(signal_handler()))
-
 # Run tasks
 try:
     requests_task = loop.create_task(run_clients())
     loop.run_until_complete(cancel(requests_task, inputQueue))
+except KeyboardInterrupt:
+    cancel_event.set()
+    loop.run_until_complete(await_requests_task_wrapper(requests_task))
 finally:
     # Zero-sleep to allow underlying connections to close
     loop.run_until_complete(asyncio.sleep(0))
     loop.close()
-    restore_terminal(fd, oldterm, oldflags)
+    if not win:
+        restore_terminal(fd, oldterm, oldflags)
