@@ -9,7 +9,7 @@ For the environment and modules setup i used [Pipenv](https://docs.pipenv.org/en
 * Run `pipenv install`
 * On Linux/MacOS use `pipenv shell` to activate pipenv shell and run scripts 
 or use `pipenv run <script_name>`
-* On Windows use `pipenv run <script_name>`
+* On Windows use `pipenv run python <script_name>`
 
 
 In this task, you need to write a simple HTTP Denial-of-Service protection system.
