@@ -69,6 +69,26 @@ async def run_clients():
         await make_requests(session, args.num_of_clients[0])
 
 
+def setup_terminal():
+    # Stdin file descriptor
+    fd = sys.stdin.fileno()
+
+    # Save terminal setting and modify to react on key press
+    oldterm = termios.tcgetattr(fd)
+    newattr = termios.tcgetattr(fd)
+    newattr[3] = newattr[3] & ~termios.ICANON & ~termios.ECHO
+    termios.tcsetattr(fd, termios.TCSANOW, newattr)
+    oldflags = fcntl.fcntl(fd, fcntl.F_GETFL)
+    fcntl.fcntl(fd, fcntl.F_SETFL, oldflags | os.O_NONBLOCK)
+    return fd, oldterm, oldflags
+
+
+def restore_terminal(fd, oldterm, oldflags):
+    # Restore terminal
+    termios.tcsetattr(fd, termios.TCSAFLUSH, oldterm)
+    fcntl.fcntl(fd, fcntl.F_SETFL, oldflags)
+
+
 def char_keyboard_nonblock(queue):
     # Convoluted way to read a key press without presing enter
     # It runs in its own thread because i didn't find a way to use
@@ -81,31 +101,14 @@ def char_keyboard_nonblock(queue):
                 queue.put_nowait(getch())
                 return
     else:
-        # Stdin file descriptor
-        fd = sys.stdin.fileno()
-
-        # Save terminal setting and modify to react on key press
-        oldterm = termios.tcgetattr(fd)
-        newattr = termios.tcgetattr(fd)
-        newattr[3] = newattr[3] & ~termios.ICANON & ~termios.ECHO
-        termios.tcsetattr(fd, termios.TCSANOW, newattr)
-        oldflags = fcntl.fcntl(fd, fcntl.F_GETFL)
-        fcntl.fcntl(fd, fcntl.F_SETFL, oldflags | os.O_NONBLOCK)
-
         try:
             while True:
                 char = sys.stdin.read(1)
                 if char:
-                    queue.put_nowait(char)
-                    # Restor settings
-                    termios.tcsetattr(fd, termios.TCSAFLUSH, oldterm)
-                    fcntl.fcntl(fd, fcntl.F_SETFL, oldflags)
+                    queue.put_nowait(char)            
                     return
         except IOError:
             pass
-
-        termios.tcsetattr(fd, termios.TCSAFLUSH, oldterm)
-        fcntl.fcntl(fd, fcntl.F_SETFL, oldflags)
 
 
 async def cancel(requests_task, queue):
@@ -131,6 +134,9 @@ parser.add_argument('num_of_clients', metavar='N', type=int_check, nargs=1,
                     help='number of clients to run')
 args = parser.parse_args()
 
+fd, oldterm, oldflags = setup_terminal()
+
+# Start input thread
 inputQueue = asyncio.Queue()
 inputThread = threading.Thread(
     target=char_keyboard_nonblock, args=(inputQueue,),
@@ -146,6 +152,7 @@ for s in signals:
     loop.add_signal_handler(
         s, lambda s=s: asyncio.create_task(signal_handler()))
 
+# Run tasks
 try:
     requests_task = loop.create_task(run_clients())
     loop.run_until_complete(cancel(requests_task, inputQueue))
@@ -153,3 +160,4 @@ finally:
     # Zero-sleep to allow underlying connections to close
     loop.run_until_complete(asyncio.sleep(0))
     loop.close()
+    restore_terminal(fd, oldterm, oldflags)
