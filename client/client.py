@@ -4,6 +4,7 @@ import asyncio
 import argparse
 import random
 import threading
+import signal
 # Diffrent imports for windows or linux/MacOS,
 # for reading key press to end the program
 try:
@@ -108,11 +109,16 @@ async def cancel(requests_task, queue):
     # program by a connection problem
     done, pending = await asyncio.wait([queue.get(),
                                         cancel_event.wait()],
-                                       return_when=asyncio.FIRST_COMPLETED)
+                                        return_when=asyncio.FIRST_COMPLETED)
     next(iter(pending)).cancel()
     print("Stoping clients...")
     cancel_event.set()
     await requests_task
+
+
+async def signal_handler():
+    # Callback for the signal handlers 
+    cancel_event.set()
 
 
 # Args parser
@@ -121,20 +127,25 @@ parser.add_argument('num_of_clients', metavar='N', type=int_check, nargs=1,
                     help='number of clients to run')
 args = parser.parse_args()
 
-
-cancel_event = asyncio.Event()
-
 inputQueue = asyncio.Queue()
 inputThread = threading.Thread(
     target=char_keyboard_nonblock, args=(inputQueue,),
     daemon=True)
 inputThread.start()
 
+cancel_event = asyncio.Event()
 loop = asyncio.get_event_loop()
 
-requests_task = loop.create_task(run_clients())
-loop.run_until_complete(cancel(requests_task, inputQueue))
+# Handle signals
+signals = (signal.SIGHUP, signal.SIGTERM, signal.SIGINT)
+for s in signals:
+    loop.add_signal_handler(
+        s, lambda s=s: asyncio.create_task(signal_handler()))
 
-# Zero-sleep to allow underlying connections to close
-loop.run_until_complete(asyncio.sleep(0))
-loop.close()
+try:
+    requests_task = loop.create_task(run_clients())
+    loop.run_until_complete(cancel(requests_task, inputQueue))
+finally:
+    # Zero-sleep to allow underlying connections to close
+    loop.run_until_complete(asyncio.sleep(0))
+    loop.close()
