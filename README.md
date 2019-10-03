@@ -1,4 +1,4 @@
-# interview-zigaresnik
+# interview-task
 
 ## Solution
 
@@ -11,6 +11,7 @@ For the environment and modules setup i used [Pipenv](https://docs.pipenv.org/en
 or use `pipenv run <script_name>`
 * On Windows use `pipenv run python <script_name>`
 
+## Task
 
 In this task, you need to write a simple HTTP Denial-of-Service protection system.
 The solution should reside in different modules (one for the server, one for the client).
